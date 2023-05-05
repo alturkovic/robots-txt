@@ -10,6 +10,6 @@ data class MatchedGrant(
     val matchedRuleGroup: RuleGroup
 ): Grant
 
-data object AllowedGrant: Grant {
+object AllowedGrant: Grant {
     override val allowed = true
 }

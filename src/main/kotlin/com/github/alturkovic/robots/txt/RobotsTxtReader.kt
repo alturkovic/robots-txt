@@ -11,7 +11,7 @@ import java.io.InputStreamReader
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-data object RobotsTxtReader {
+object RobotsTxtReader {
     private val log = KotlinLogging.logger {}
 
     fun read(
@@ -74,7 +74,7 @@ private object RobotsLineParser {
         val crawlDelay: Duration
     ) : LineEntry
 
-    data object SkipLineEntry : LineEntry
+    object SkipLineEntry : LineEntry
 }
 
 private class RobotsBuilder {

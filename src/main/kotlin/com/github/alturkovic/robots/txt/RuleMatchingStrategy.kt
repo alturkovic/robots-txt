@@ -4,7 +4,7 @@ interface RuleMatchingStrategy {
     fun matches(rule: Rule, path: String): Boolean
 }
 
-data object WildcardRuleMatchingStrategy : RuleMatchingStrategy {
+object WildcardRuleMatchingStrategy : RuleMatchingStrategy {
     override fun matches(rule: Rule, path: String): Boolean {
         return matches(rule.pattern, path)
     }

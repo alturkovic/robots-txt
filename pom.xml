@@ -29,7 +29,6 @@
                 <configuration>
                     <jvmTarget>${java.version}</jvmTarget>
                     <javaParameters>true</javaParameters>
-                    <args>-language-version 1.9</args>
                 </configuration>
                 <executions>
                     <execution>

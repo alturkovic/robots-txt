@@ -4,7 +4,7 @@ interface RuleSelectionStrategy {
     fun select(rules: List<Rule>): Rule?
 }
 
-data object LongestRuleSelectionStrategy : RuleSelectionStrategy {
+object LongestRuleSelectionStrategy : RuleSelectionStrategy {
     override fun select(rules: List<Rule>): Rule? {
         val groupedRules = rules.groupBy { it.allowed }
 
