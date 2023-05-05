@@ -7,7 +7,5 @@ data class RuleGroup(
     val rules: List<Rule>,
     val crawlDelay: Duration? = null,
 ) {
-    fun isApplicableTo(userAgent: String): Boolean {
-        return userAgents.any { it == "*" || userAgent.startsWith(it, ignoreCase = true) }
-    }
+    fun isApplicableTo(userAgent: String) = userAgents.any { it == "*" || userAgent.startsWith(it, ignoreCase = true) }
 }
