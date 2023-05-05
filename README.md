@@ -1,8 +1,6 @@
-image:https://img.shields.io/badge/Java-8%2B-ED8B00?style=for-the-badge&labelColor=ED8B00&logo=java&color=808080[Java] 
-
-image:https://img.shields.io/jitpack/v/github/alturkovic/robots-txt?style=for-the-badge&labelColor=007ec5&color=808080&logo=Git&logoColor=white[JitPack] 
-
-image:https://img.shields.io/github/license/alturkovic/robots-txt?style=for-the-badge&color=808080&logo=Open%20Source%20Initiative&logoColor=white[License]
+![Java](https://img.shields.io/badge/Java-8%2B-ED8B00?style=for-the-badge&labelColor=ED8B00&logo=java&color=808080)
+![JitPack](https://img.shields.io/jitpack/v/github/alturkovic/robots-txt?style=for-the-badge&labelColor=007ec5&color=808080&logo=Git&logoColor=white)
+![License](https://img.shields.io/github/license/alturkovic/robots-txt?style=for-the-badge&color=808080&logo=Open%20Source%20Initiative&logoColor=white)
 
 # Robots.txt
 
