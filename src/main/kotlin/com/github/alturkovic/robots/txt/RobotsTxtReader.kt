@@ -4,6 +4,7 @@ import com.github.alturkovic.robots.txt.RobotsLineParser.CrawlDelayEntry
 import com.github.alturkovic.robots.txt.RobotsLineParser.RuleEntry
 import com.github.alturkovic.robots.txt.RobotsLineParser.SkipLineEntry
 import com.github.alturkovic.robots.txt.RobotsLineParser.UserAgentEntry
+import mu.KotlinLogging
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -11,6 +12,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data object RobotsTxtReader {
+    private val log = KotlinLogging.logger {}
+
     fun read(
         input: InputStream,
         ruleMatchingStrategy: RuleMatchingStrategy = WildcardRuleMatchingStrategy,
@@ -27,8 +30,8 @@ data object RobotsTxtReader {
                     is UserAgentEntry -> builder.acceptUserAgent(entry.userAgent)
                     is RuleEntry -> builder.acceptRule(entry.rule)
                     is CrawlDelayEntry -> builder.acceptCrawlDelay(entry.crawlDelay)
-                    is SkipLineEntry -> { /* TODO logging*/
-                    }
+
+                    is SkipLineEntry -> log.debug { "Ignoring line: $it" }
                 }
             }
 

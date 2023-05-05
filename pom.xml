@@ -12,6 +12,8 @@
         <java.version>1.8</java.version>
         <kotlin.version>1.8.20</kotlin.version>
 
+        <kotlin-logging.version>3.0.5</kotlin-logging.version>
+
         <junit-jupiter.version>5.9.0</junit-jupiter.version>
         <assertj-core.version>3.23.1</assertj-core.version>
     </properties>
@@ -71,6 +73,11 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
             <version>${kotlin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.microutils</groupId>
+            <artifactId>kotlin-logging-jvm</artifactId>
+            <version>${kotlin-logging.version}</version>
         </dependency>
 
         <dependency>
