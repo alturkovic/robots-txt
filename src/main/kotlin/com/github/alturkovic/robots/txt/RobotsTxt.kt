@@ -32,8 +32,11 @@ data class RobotsTxt(
         for (candidate in this) {
             for (ruleGroupAgent in candidate.userAgents) {
                 val matchLength = calculateUserAgentMatchLength(userAgent, ruleGroupAgent)
-                if (matchLength >= longestMatch) {
-                    longestMatch = matchLength;
+                if (matchLength > longestMatch) {
+                    longestMatch = matchLength
+                    bestMatches.clear()
+                    bestMatches.add(candidate)
+                } else if (matchLength == longestMatch) {
                     bestMatches.add(candidate)
                 }
             }
