@@ -48,6 +48,37 @@ private class RobotsTxtTest {
     }
 
     @Test
+    fun shouldAllowWithMoreSpecificCrawlDelayWithMultipleGroups() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-Agent: *
+                Disallow: /
+            
+                User-Agent: FooBot
+                Allow: /x/
+                Crawl-Delay: 2
+                
+                User-Agent: BazBot
+                User-Agent: FooBot
+                Allow: /z/
+                Crawl-Delay: 4
+            """.trimIndent().byteInputStream()
+        )
+
+        robotsTxt.query("FooBot", "/x/").let {
+            assertThat(it).isInstanceOf(MatchedGrant::class.java)
+            assertThat(it.allowed).isTrue()
+            assertThat((it as MatchedGrant).matchedRuleGroup.crawlDelay!!).isEqualTo(2.seconds)
+        }
+
+        robotsTxt.query("FooBot", "/z/").let {
+            assertThat(it).isInstanceOf(MatchedGrant::class.java)
+            assertThat(it.allowed).isTrue()
+            assertThat((it as MatchedGrant).matchedRuleGroup.crawlDelay!!).isEqualTo(4.seconds)
+        }
+    }
+
+    @Test
     fun shouldDisallowAllUserAgents() {
         val robotsTxt = RobotsTxtReader.read(
             """
@@ -240,6 +271,45 @@ private class RobotsTxtTest {
 
         assertThat(robotsTxt.query("FooBot", "/filename.php").allowed).isFalse()
         assertThat(robotsTxt.query("FooBot", "/folder/filename.php").allowed).isFalse()
+    }
+
+    @Test
+    fun shouldGroupRulesWithUserAgentInGroupAndStandalone() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+            User-Agent: FooBot
+            Disallow: /
+            Allow: /x/
+            
+            User-Agent: BarBot
+            Disallow: /
+            Allow: /y/
+            Allow: /w/
+            
+            User-Agent: BazBot
+            User-Agent: FooBot
+            Allow: /z/
+            Disallow: /
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/w/").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/x/").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/y/").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/z/").allowed).isTrue()
+
+        assertThat(robotsTxt.query("BarBot", "/").allowed).isFalse()
+        assertThat(robotsTxt.query("BarBot", "/w/").allowed).isTrue()
+        assertThat(robotsTxt.query("BarBot", "/x/").allowed).isFalse()
+        assertThat(robotsTxt.query("BarBot", "/y/").allowed).isTrue()
+        assertThat(robotsTxt.query("BarBot", "/z/").allowed).isFalse()
+
+        assertThat(robotsTxt.query("BazBot", "/").allowed).isFalse()
+        assertThat(robotsTxt.query("BazBot", "/w/").allowed).isFalse()
+        assertThat(robotsTxt.query("BazBot", "/x/").allowed).isFalse()
+        assertThat(robotsTxt.query("BazBot", "/y/").allowed).isFalse()
+        assertThat(robotsTxt.query("BazBot", "/z/").allowed).isTrue()
     }
 
     @Test

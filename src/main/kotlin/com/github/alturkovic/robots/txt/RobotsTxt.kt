@@ -8,29 +8,37 @@ data class RobotsTxt(
     private val ruleSelectionStrategy: RuleSelectionStrategy = LongestRuleSelectionStrategy
 ) {
     fun query(userAgent: String, path: String): Grant {
-        val candidates = candidates(userAgent).ifEmpty { return AllowedGrant }
+        val candidates = candidates(userAgent).ifEmpty { return NonMatchedAllowedGrant }
 
-        val mostSpecificRuleGroup = candidates.findBestUserAgentMatch(userAgent)
-        val matchedRules = mostSpecificRuleGroup.rules.filter { ruleMatchingStrategy.matches(it, path) }
-        val mostImportantRule = ruleSelectionStrategy.select(matchedRules) ?: return AllowedGrant
+        val mostSpecificRuleGroups = candidates.findBestUserAgentMatches(userAgent)
+        val mostImportantRule = mostSpecificRuleGroups.findMostImportantRule(path) ?: return NonMatchedAllowedGrant
+        val mostSpecificRuleGroup = mostSpecificRuleGroups.first { mostImportantRule in it.rules }
         return MatchedGrant(mostImportantRule.allowed, mostImportantRule, mostSpecificRuleGroup)
     }
 
     private fun candidates(userAgent: String) = ruleGroups.filter { it.isApplicableTo(userAgent) }
 
-    private fun List<RuleGroup>.findBestUserAgentMatch(userAgent: String): RuleGroup {
+    private fun List<RuleGroup>.findMostImportantRule(path: String): Rule? {
+        val matchedRules = this
+            .flatMap { it.rules }
+            .filter { ruleMatchingStrategy.matches(it, path) }
+
+        return ruleSelectionStrategy.select(matchedRules)
+    }
+
+    private fun List<RuleGroup>.findBestUserAgentMatches(userAgent: String): List<RuleGroup> {
         var longestMatch = 0
-        lateinit var bestMatch: RuleGroup
+        val bestMatches = mutableListOf<RuleGroup>()
         for (candidate in this) {
             for (ruleGroupAgent in candidate.userAgents) {
                 val matchLength = calculateUserAgentMatchLength(userAgent, ruleGroupAgent)
-                if (matchLength > longestMatch) {
+                if (matchLength >= longestMatch) {
                     longestMatch = matchLength;
-                    bestMatch = candidate
+                    bestMatches.add(candidate)
                 }
             }
         }
-        return bestMatch
+        return bestMatches
     }
 
     private fun calculateUserAgentMatchLength(userAgent: String, ruleGroupAgent: String): Int =
