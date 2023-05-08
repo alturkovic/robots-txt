@@ -8,6 +8,7 @@ import mu.KotlinLogging
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.URLDecoder
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -48,8 +49,11 @@ private object RobotsLineParser {
         val colonIndex = line.indexOf(':')
         if (colonIndex == -1) return SkipLineEntry
 
-        val key = line.substring(0, colonIndex).trim().takeIf { it.isNotBlank() } ?: return SkipLineEntry
-        val value = line.substring(colonIndex + 1, line.indexOf('#').takeIf { it != -1 } ?: line.length).trim()
+        val key = line.substring(0, colonIndex).trim()
+            .takeIf { it.isNotBlank() } ?: return SkipLineEntry
+
+        val value = line.substringAfter(":").substringBefore("#").trim()
+            .tryDecode()
 
         return when {
             key.equals("user-agent", ignoreCase = true) -> UserAgentEntry(value)
@@ -58,6 +62,12 @@ private object RobotsLineParser {
             disallowKeys.contains(key.lowercase()) -> RuleEntry(Rule(allowed = false, value))
             else -> SkipLineEntry
         }
+    }
+
+    private fun String.tryDecode() = try {
+        URLDecoder.decode(this, "UTF-8")
+    } catch (_: Exception) {
+        this
     }
 
     sealed interface LineEntry

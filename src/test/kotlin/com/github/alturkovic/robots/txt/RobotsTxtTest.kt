@@ -6,160 +6,287 @@ import kotlin.time.Duration.Companion.seconds
 
 private class RobotsTxtTest {
 
-    private val robotsTxt = RobotsTxtReader.read(Unit::class.java.getResourceAsStream("/robots.txt"))
-
     @Test
     fun shouldAllowUnmatched() {
-        assertThat(robotsTxt.query("MyBot", "/unmatched/foo.txt").allowed).isTrue()
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                # No rules defined
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/unmatched/foo.txt").allowed).isTrue()
     }
 
     @Test
-    fun shouldTestUnspecifiedUserAgent() {
-        val userAgent = "MyBot"
+    fun shouldAllowAnyUserAgent() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /
+                Allow: /public/
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/root").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/root/public/foo.txt").allowed).isTrue()
-
-        assertThat(robotsTxt.query(userAgent, "/root/private/foo.txt").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/root/foo.txt").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/private/foo.txt").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/public/foo.txt").allowed).isTrue()
     }
 
     @Test
     fun shouldAllowWithCrawlDelay() {
-        val grant = robotsTxt.query("Delayed", "/root/delayed/foo.txt")
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Allow: /delayed/
+                Crawl-Delay: 2
+            """.trimIndent().byteInputStream()
+        )
+
+        val grant = robotsTxt.query("FooBot", "/delayed/foo.txt")
         assertThat(grant).isInstanceOf(MatchedGrant::class.java)
         assertThat(grant.allowed).isTrue()
         assertThat((grant as MatchedGrant).matchedRuleGroup.crawlDelay!!).isEqualTo(2.seconds)
     }
 
     @Test
-    fun shouldTestDisallowAllUserAgent() {
-        val userAgent = "DisallowAll" // Disallow: /
+    fun shouldDisallowAllUserAgents() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/root/private/foo.txt").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/public/foo.txt").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestAllowedUserAgent() {
-        val userAgent = "Allowed" // Disallow:
+    fun shouldAllowAllUserAgents() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: 
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/").allowed).isTrue()
     }
 
     @Test
-    fun shouldTestSuperUserUserAgent() {
-        val userAgent = "SuperUser" // Allow: /
+    fun shouldAllowSpecificUserAgent() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /
+                
+                User-Agent: FooBot
+                Allow: /
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/root/private/foo.txt").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/private/foo.txt").allowed).isTrue()
+        assertThat(robotsTxt.query("BarBot", "/private/foo.txt").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestWildcardUserAgent() {
-        val userAgent = "Wild"
+    fun shouldAllowWildcards() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /wild*/
+                Allow: /wildest/
+                Disallow: /*.gif$
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/wildest/data.txt").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/root/my.gif/pictures").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/wildest/data.txt").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/my.gif/pictures").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/wild/data.txt").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/wilder/data.txt").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/my.gif").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/root/my.gif").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/wild/data.txt").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/wilder/data.txt").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/my.gif").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/root/my.gif").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestBestMatchingUserAgent() {
-        val userAgent = "FishBot" // Disallow: /fish.xml
+    fun shouldUseBestMatchingUserAgent() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: Foo
+                Disallow: /foo.txt
+                
+                User-agent: Bar
+                Disallow: /foo.html
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/fish.html").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/foo.html").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/foo.txt").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestFishStartingWith() {
-        val userAgent = "FishStartingWith" // Disallow: /fish
+    fun shouldDisallowStartingWith() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /fish
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/Fish.asp").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/catfish").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/?id=fish").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/Fish.asp").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/catfish").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/?id=fish").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/fish").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish/salmon.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fishheads").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fishheads/yummy.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish.php?id=anything").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.xml").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish/salmon.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fishheads").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fishheads/yummy.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.php?id=anything").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestFishStartingWithWildcard() {
-        val userAgent = "FishStartingWithWildcard" // Disallow: /fish*
+    fun shouldDisallowStartingWithWildcard() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /fish*
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/Fish.asp").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/catfish").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/?id=fish").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/Fish.asp").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/catfish").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/?id=fish").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/fish").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish/salmon.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fishheads").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fishheads/yummy.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish.php?id=anything").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.xml").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish/salmon.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fishheads").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fishheads/yummy.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.php?id=anything").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestFishFolder() {
-        val userAgent = "FishFolder" // Disallow: /fish/
+    fun shouldDisallowFolder() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /fish/
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/fish").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/fish.html").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/?id=fish").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish.html").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish.xml").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/?id=fish").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/fish/").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish/salmon.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fish/?id=anything").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish/").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish/salmon.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish/?id=anything").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestFishPhp() {
-        val userAgent = "FishPhp" // Disallow: /fish*.php
+    fun shouldDisallowStartingWithAndWildcardWithExtension() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /fish*.php
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/Fish.PHP").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish.xml").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/Fish.PHP").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/fish.php").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/fishheads/catfish.php?parameters").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fish.php").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/fishheads/catfish.php?parameters").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestPhp() {
-        val userAgent = "Php" // Disallow: /*.php
+    fun shouldDisallowWildcardWithExtension() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /*.php
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/windows.PHP").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish.xml").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/windows.PHP").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/filename.php").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/folder/filename.php").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/folder/filename.php?parameter").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/folder/any.php.file.html").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/folder/any.php.file.html/filename.php").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/filename.php5").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/filename.php").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/folder/filename.php").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/folder/filename.php?parameter").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/folder/any.php.file.html").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/folder/any.php.file.html/filename.php").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/filename.php5").allowed).isFalse()
     }
 
     @Test
-    fun shouldTestPhpEnding() {
-        val userAgent = "PhpEnding" // Disallow: /*.php$
+    fun shouldDisallowEndingWithExtension() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /*.php$
+            """.trimIndent().byteInputStream()
+        )
 
-        assertThat(robotsTxt.query(userAgent, "/fish.xml").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/folder/filename.php/").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/folder/filename.php?parameter").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/folder/any.php.file.html").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/filename.php5").allowed).isTrue()
-        assertThat(robotsTxt.query(userAgent, "/windows.PHP").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish.xml").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/folder/filename.php/").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/folder/filename.php?parameter").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/folder/any.php.file.html").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/filename.php5").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/windows.PHP").allowed).isTrue()
 
-        assertThat(robotsTxt.query(userAgent, "/filename.php").allowed).isFalse()
-        assertThat(robotsTxt.query(userAgent, "/folder/filename.php").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/filename.php").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/folder/filename.php").allowed).isFalse()
+    }
+
+    @Test
+    fun shouldDisallowWithUrlInParameters() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /foo?bar=qux&baz=http://foo.bar?tar&par
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/foo?bar=qux&baz=http://foo.bar?tar&par").allowed).isFalse()
+    }
+
+    @Test
+    fun shouldDisallowWithNonAsciiCharacter() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /foo/ツ
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/foo/ツ").allowed).isFalse()
+    }
+
+    @Test
+    fun shouldDisallowWithEscapedCharacters() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /foo/%E3%83%84
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/foo/ツ").allowed).isFalse()
+    }
+
+    @Test
+    fun shouldDisallowWithNonEscapedCharacters() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /foo/%E
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/foo/%E").allowed).isFalse()
     }
 }
