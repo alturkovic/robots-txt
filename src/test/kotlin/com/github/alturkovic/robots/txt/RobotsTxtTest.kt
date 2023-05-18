@@ -218,6 +218,24 @@ private class RobotsTxtTest {
     }
 
     @Test
+    fun shouldDisallowNestedFolder() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /*/*/fish/
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("FooBot", "/fish/").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/sub/fish/").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/sub/fish/salmon.html").allowed).isTrue()
+        assertThat(robotsTxt.query("FooBot", "/fish.html").allowed).isTrue()
+
+        assertThat(robotsTxt.query("FooBot", "/root/sub/fish/").allowed).isFalse()
+        assertThat(robotsTxt.query("FooBot", "/root/sub/fish/salmon.html").allowed).isFalse()
+    }
+
+    @Test
     fun shouldDisallowStartingWithAndWildcardWithExtension() {
         val robotsTxt = RobotsTxtReader.read(
             """
