@@ -287,7 +287,57 @@ private class RobotsTxtReaderTest {
             Disallow: /a/
             Disallow: /bbbbbbbbbb
             """.trimIndent().byteInputStream(),
-            ignoreLinesLongerThan = 20
+            lineFilter = LineSizeFilter(20)
+        )
+
+        assertThat(robotsTxt).isEqualTo(
+            RobotsTxt(
+                ruleGroups = listOf(
+                    RuleGroup(
+                        userAgents = setOf("FooBot"),
+                        rules = listOf(
+                            Rule(allowed = false, "/a/")
+                        )
+                    )
+                )
+            )
+        )
+    }
+
+    @Test
+    fun shouldSkipTooLongRobotsUsingByteLimit() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+            User-agent: FooBot
+            Disallow: /a/
+            Disallow: /bbbbbbbbbb
+            """.trimIndent().byteInputStream(),
+            lineFilter = RobotsSizeFilter(32)
+        )
+
+        assertThat(robotsTxt).isEqualTo(
+            RobotsTxt(
+                ruleGroups = listOf(
+                    RuleGroup(
+                        userAgents = setOf("FooBot"),
+                        rules = listOf(
+                            Rule(allowed = false, "/a/")
+                        )
+                    )
+                )
+            )
+        )
+    }
+
+    @Test
+    fun shouldSkipTooLongRobotsUsingLineLimit() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+            User-agent: FooBot
+            Disallow: /a/
+            Disallow: /bbbbbbbbbb
+            """.trimIndent().byteInputStream(),
+            lineFilter = RobotsLinesFilter(2)
         )
 
         assertThat(robotsTxt).isEqualTo(

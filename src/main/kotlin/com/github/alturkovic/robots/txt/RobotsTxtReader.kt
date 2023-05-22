@@ -19,13 +19,13 @@ object RobotsTxtReader {
         input: InputStream,
         ruleMatchingStrategy: RuleMatchingStrategy = WildcardRuleMatchingStrategy,
         ruleSelectionStrategy: RuleSelectionStrategy = LongestRuleSelectionStrategy,
-        ignoreLinesLongerThan: Long = Long.MAX_VALUE
+        lineFilter: LineFilter? = null
     ): RobotsTxt {
         val builder = RobotsBuilder()
 
         BufferedReader(InputStreamReader(input)).lineSequence()
             .map { it.trim() }
-            .filter { it.length < ignoreLinesLongerThan }
+            .filter { lineFilter?.accept(it) ?: true }
             .forEach {
                 when (val entry = RobotsLineParser.parseLine(it)) {
                     is UserAgentEntry -> builder.acceptUserAgent(entry.userAgent)
