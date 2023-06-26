@@ -119,6 +119,22 @@ private class RobotsTxtTest {
     }
 
     @Test
+    fun shouldAllowSpecificUserAgentIgnoringCaseSensitivity() {
+        val robotsTxt = RobotsTxtReader.read(
+            """
+                User-agent: *
+                Disallow: /
+                
+                User-Agent: FooBot
+                Allow: /
+            """.trimIndent().byteInputStream()
+        )
+
+        assertThat(robotsTxt.query("fooBot", "/private/foo.txt").allowed).isTrue()
+        assertThat(robotsTxt.query("BarBot", "/private/foo.txt").allowed).isFalse()
+    }
+
+    @Test
     fun shouldAllowWildcards() {
         val robotsTxt = RobotsTxtReader.read(
             """
