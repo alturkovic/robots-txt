@@ -6,6 +6,31 @@
 
 Java library for reading and querying [robots.txt](http://www.robotstxt.org/orig.html) files.
 
+## Using the library in Kotlin
+
+1. Parse `robots.txt`:
+```
+val robotsTxt = RobotsTxtReader.read(inputStream)
+```
+
+2. Query `robotsTxt`:
+```
+val grant = robotsTxt.query("GoogleBot", "/path")
+val canAccess = grant.allowed
+when(grant) {
+  is MatchedGrant -> {
+    val crawlDelay = grant.matchedRuleGroup.crawlDelay
+  }
+  is NonMatchedAllowedGrant {
+    TODO("Not matched in robots.txt")
+  }
+}
+
+if (grant instanceof MatchedGrant) {
+  Duration crawlDelay = ((MatchedGrant) grant).getMatchedRuleGroup().getCrawlDelay();
+}
+```
+
 ## Using the library in Java
 
 1. Parse `robots.txt`:
