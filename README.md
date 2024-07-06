@@ -18,12 +18,12 @@ val robotsTxt = RobotsTxtReader.read(inputStream)
 val grant = robotsTxt.query("GoogleBot", "/path")
 val canAccess = grant.allowed
 when(grant) {
-  is MatchedGrant -> {
-    val crawlDelay = grant.matchedRuleGroup.crawlDelay
-  }
-  is NonMatchedAllowedGrant {
-    TODO("Not matched in robots.txt")
-  }
+    is MatchedGrant -> {
+        val crawlDelay = grant.matchedRuleGroup.crawlDelay
+    }
+    is NonMatchedAllowedGrant -> {
+        TODO("Not matched in robots.txt")
+    }
 }
 ```
 
