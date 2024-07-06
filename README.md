@@ -25,10 +25,6 @@ when(grant) {
     TODO("Not matched in robots.txt")
   }
 }
-
-if (grant instanceof MatchedGrant) {
-  Duration crawlDelay = ((MatchedGrant) grant).getMatchedRuleGroup().getCrawlDelay();
-}
 ```
 
 ## Using the library in Java
